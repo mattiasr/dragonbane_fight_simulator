@@ -12,6 +12,7 @@ Works on linux with python3
 
 ## Running the simulation
 1. Make sure you have weapons, players and monsters added to `simulate.py`
+![Configuration](configuration.png)
 2. Set the number of times you like to run the simulation by edit `total_samples`
 3. Run the simulation by executing `python3 simulate.py`
 
