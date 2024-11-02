@@ -347,8 +347,10 @@ for _ in range(total_samples):
                         break
 
 print("======================================")
-print(f"Party: {[m.name for m in party]}")
-print(f"Monsters: {[m.name for m in monsters]}")
+player_info = [(player.name, f"{player.hp}/{player.max_hp}") for player in party]
+monster_info = [(monster.name, f"{monster.hp}/{monster.max_hp}") for monster in monsters]
+print(f"Party: {player_info}")
+print(f"Monsters: {monster_info}")
 print("Totalt:")
 print(f"{sum(monsters_killed)} monstes killed ({sum(monsters_killed)/total_samples} killed/fight)")
 print(f"{sum(monster_whipes)} monster whipes ({sum(monster_whipes)/total_samples} monster whipes/fight)")
