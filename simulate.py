@@ -170,39 +170,30 @@ class Weapon:
         return total_dmg, total_rolls
 
 class BaseStats:
-    def __init__(self, name, ac):
+    def __init__(self, name, ac, hp=None, melee_weapon=None, magic_spell=None):
         self.name = name
         self.ac = ac
+        self.hp = hp
+        self.max_hp = self.hp
         self.targets = []
         self.is_player = True
         self.is_mage = False
         self.vp = 0
-
-class PartyMember (BaseStats):
-    def __init__(self, name, sty, fys, smi, int_, psy, kar, ac=0, melee_weapon=None, range_weapon=None, magic_spell=None, is_mage=False):
-        super().__init__(name, ac)
-        self.STY = sty
-        self.SMI = smi
-        self.FYS = fys
-        self.PSY = psy
-        self.INT = int_
-        self.KAR = kar
-        self.is_mage = is_mage
-        self.ac = ac  # Armor class
         self.melee_weapon = melee_weapon
-        self.range_weapon = range_weapon
         self.magic_spell = magic_spell
-        self.hp = self.FYS  # Default hp
-        self.max_hp = self.FYS
-        self.vp = self.PSY
-    
 
-    def attack(self, skill, magic=False):
+    def attack(self, skill=None, fv=None, skadebonus=None, magic=False):
         total_damage = 0
         damage = 0
+
+        # Determine FV and Skadebonus based on character type
+        if fv is None:
+            fv = get_grundchans(getattr(self, skill, 0)) * 2
+        if skadebonus is None:
+            skadebonus = get_skadebonus(getattr(self, skill, 0))
+
         total_rolls = []
-        sb = get_skadebonus(getattr(self, skill, 0))
-        fv = get_grundchans(getattr(self, skill, None)) * 2
+
         fv_roll, fv_rolls = roll_dice("1T20")
 
         if fv_roll > fv:
@@ -229,55 +220,44 @@ class PartyMember (BaseStats):
             total_damage+= damage
         
         # Do we have Skadebonus?
-        if sb and not magic:
-            damage, rolls = roll_dice(sb)
+        if skadebonus and not magic:
+            damage, rolls = roll_dice(skadebonus)
             total_rolls.append(rolls)
             total_damage+= damage
 
         return total_damage, total_rolls
 
+class PartyMember (BaseStats):
+    def __init__(self, name, sty, fys, smi, int_, psy, kar, ac=0, melee_weapon=None, range_weapon=None, magic_spell=None, is_mage=False):
+        super().__init__(name, ac, melee_weapon=melee_weapon, magic_spell=magic_spell)
+        self.STY = sty
+        self.SMI = smi
+        self.FYS = fys
+        self.PSY = psy
+        self.INT = int_
+        self.KAR = kar
+        self.is_mage = is_mage
+        self.ac = ac  # Armor class
+        self.range_weapon = range_weapon
+        self.hp = self.FYS  # Default hp
+        self.max_hp = self.FYS
+        self.vp = self.PSY
+    
+    def attack(self, skill=None, magic=None):
+        return super().attack(skill=skill, skadebonus=get_skadebonus(getattr(self, skill, 0)), magic=magic)
+
 class Monster (BaseStats):
     def __init__(self, name, hp, ac, fv, melee_weapon, magic_spell=None, sb=0):
-        super().__init__(name, ac)
-        self.hp = hp
-        self.max_hp = hp
+        super().__init__(name, ac, hp=hp, melee_weapon=melee_weapon, magic_spell=magic_spell)
         self.fv = fv
-        self.melee_weapon = melee_weapon
         self.sb = sb
         self.targets = []
         self.is_player = False
         self.magic_spell = magic_spell
 
-    def attack(self, magic=False):
-        total_damage = 0
-        damage = 0
-        total_rolls = []
-        fv_roll, fv_rolls = roll_dice("1T20")
+    def attack(self, skill=None, magic=None):
+        return super().attack(fv=self.fv, skadebonus=self.sb)
 
-        if fv_roll > self.fv:
-            print(f"\t{FAILED} {self.name} rolls FV: {fv_roll} against FV: {self.fv} ({fv_rolls})")
-            # Failed roll
-            return 0, []
-        elif fv_roll == 1:
-            # Crit hit
-            print(f"\t{EXPLOSION} {self.name} rolls FV: {fv_roll} against FV: {self.fv} ({fv_rolls})")
-            damage, rolls = self.melee_weapon.roll_damage(is_crit=True)
-            total_rolls.append(rolls)
-            total_damage+=damage
-        else:
-            print(f"\t{INFO} {self.name} rolls FV: {fv_roll} against FV: {self.fv} ({fv_rolls})")
-            # Normal hit
-            damage, rolls = self.melee_weapon.roll_damage()
-            total_rolls.append(rolls)
-            total_damage+= damage
-        
-        # Do we have Skadebonus?
-        if self.sb:
-            damage, rolls = roll_dice(self.sb)
-            total_rolls.append(rolls)
-            total_damage+= damage
-
-        return total_damage, total_rolls
 
 # Weapons
 unarmed = Weapon("Unarmed", "1T6", "STY")
