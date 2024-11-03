@@ -314,7 +314,7 @@ tentakel = Weapon("Tentacle", "1T8", "STY")
 battleaxe = Weapon("BattleAxe", "1T8", "STY")
 
 # Statistics metrics
-total_samples = 100
+total_samples = 1000
 total_rounds = []
 players_killed = []
 monsters_killed = []
@@ -375,10 +375,26 @@ for _ in range(total_samples):
             break
 
         rounds+=1
+        live_dead = []
+        for p in fighters:
+            if isinstance(p, list):
+                inner_list = []
+                for m in p:
+                    if m.hp <= 0:
+                        inner_list.append(f"{BIG_SKULL} {m.name}")
+                    else:
+                        inner_list.append(f"{GREEN_HEART} {m.name}")
+                live_dead.append(inner_list)
+            else:
+                if p.hp <= 0 and p.perma_death:
+                    live_dead.append(f"{BIG_SKULL} {p.name}")
+                elif p.hp <= 0:
+                    live_dead.append(f"{SMALL_SKULL} {p.name}")
+                else:
+                    live_dead.append(f"{BLUE_HEART} {p.name}")
+
         print(f"Round {rounds}", end=": ")
-        #print(f"Initiative {[(p.name, p.hp) if hasattr(p, 'name') else [(sub_p.name, sub_p.hp) for sub_p in p] for p in fighters]}")
-        print(f"Initiative {[p.name if hasattr(p, 'name') else [sub_p.name for sub_p in p] for p in fighters]}")
-#        print(fighters)
+        print(f"Initiative {live_dead}")
         for p in fighters:
             if isinstance(p, list):
                 # This is a monster phase
@@ -420,13 +436,11 @@ for _ in range(total_samples):
                         break
 
 print("======================================")
-#player_info = [(player.name, f"{player.hp}/{player.max_hp}") for player in party]
-#monster_info = [(monster.name, f"{monster.hp}/{monster.max_hp}") for monster in monsters]
-#print(f"Party: {player_info}")
-#print(f"Monsters: {monster_info}")
 print("Totalt:")
 print(f"{sum(monsters_killed)} monstes killed ({sum(monsters_killed)/total_samples} killed/fight)")
 print(f"{sum(monster_whipes)} monster whipes ({sum(monster_whipes)/total_samples} monster whipes/fight)")
 print(f"{sum(players_killed)} players killed ({sum(players_killed)/total_samples} killed/fight)")
 print(f"{sum(party_whipes)} party whipes ({sum(party_whipes)/total_samples} party whipes/fight)")
 print(f"{total_samples} fights ({sum(total_rounds)/total_samples} rounds/fight)")
+percentage_of_success = (sum(monster_whipes)/total_samples) * 100
+print(f"Theres a {percentage_of_success:.2f}% Chance of success for the party")
