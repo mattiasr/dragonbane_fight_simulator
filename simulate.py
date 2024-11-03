@@ -2,19 +2,20 @@
 import random
 import copy
 
-INFO = "\U0001F6C8"
-HEAL = "\U0001F33F"
-EYES = "\U0001F440"
 ATTACK_SPELL = "\U00002728"
 ATTACK_SWORD = "\u2694"
-GREEN_HEART = "\U0001F49A"
-BLUE_HEART = "\U0001F499"
-SMALL_SKULL = "\u2620"
 BIG_SKULL = "\U0001F480"
-EXPLOSION = "\U0001F4A5"
-FAILED = "\u274C"
-WARNING = "\U000026A0\U0000FE0F"
+BLUE_HEART = "\U0001F499"
 DICE = "\U0001F3B2"
+EXPLOSION = "\U0001F4A5"
+EYES = "\U0001F440"
+FAILED = "\u274C"
+GREEN_HEART = "\U0001F49A"
+HEAL = "\U0001F33F"
+INFO = "\U0001F6C8"
+RAINBOW = "\U0001F308"
+SMALL_SKULL = "\u2620"
+WARNING = "\U000026A0\U0000FE0F"
 
 class Weapon:
     def __init__(self, name, damage, skill):
@@ -186,11 +187,52 @@ def get_grundchans(value):
     elif value > 15 and value <= 18:
         return 7
 
-def make_attack(attacker, opponents):
-    #print(f"{attacker.name}, {attacker.hp}")
-    if attacker.hp <= 0:
-        return 1
+def decorate_initiative(fighters):
+    live_dead = []
+    for p in fighters:
+        if isinstance(p, list):
+            inner_list = []
+            for m in p:
+                if m.hp <= 0:
+                    inner_list.append(f"{BIG_SKULL} {m.name}")
+                else:
+                    inner_list.append(f"{GREEN_HEART} {m.name}")
+            live_dead.append(inner_list)
+        else:
+            if p.hp <= 0 and p.perma_death:
+                live_dead.append(f"{BIG_SKULL} {p.name}")
+            elif p.hp <= 0:
+                live_dead.append(f"{SMALL_SKULL} {p.name}")
+            else:
+                live_dead.append(f"{BLUE_HEART} {p.name}")
+    return live_dead
 
+def make_death_roll(player):
+    death_save, rolls = roll_dice("1T20")
+    if death_save == 1:
+        p.successful_death_saves+=2
+        print(f"\t{EXPLOSION}{DICE}{GREEN_HEART}\t{p.name} manage to survive perma death this time {p.successful_death_saves}/3 ({rolls})")
+    elif death_save <= p.FYS:
+        p.successful_death_saves+=1
+        print(f"\t{DICE}{GREEN_HEART}\t{p.name} manage to survive perma death this time {p.successful_death_saves}/3 ({rolls})")
+    elif death_save == 20:
+        p.failed_death_saves+=2
+        print(f"\t{EXPLOSION}{DICE}{SMALL_SKULL}\t{p.name} rolled deamon roll on perma death {p.failed_death_saves}/3 ({rolls})")
+    else:
+        p.failed_death_saves+=1
+        print(f"\t{DICE}{SMALL_SKULL}\t{p.name} failed roll on perma death {p.failed_death_saves}/3 ({rolls})")
+
+    if p.successful_death_saves >= 3:
+        heal, rolls = roll_dice("1T6")
+        print(f"\t{HEAL}\t{p.name} successfully manage to save himself and getup again with {heal}/{p.max_hp}")
+        p.recover(heal)
+        return 1
+    elif p.failed_death_saves >= 3:
+        print(f"\t{BIG_SKULL}\t{p.name} has failed 3 death saves, the hero has fallen") 
+        p.perma_death = True
+    return 0
+
+def make_attack(attacker, opponents):
     # Remove dead ppl
     for t in attacker.targets:
         if t.hp <= 0:
@@ -238,7 +280,7 @@ def make_attack(attacker, opponents):
             gain_vp, rolls = roll_dice("1T6")
             attacker.vp+=gain_vp
             print(f"\t{HEAL}\t{attacker.name} rest to be able to cast more, gain {gain_vp} VP ({rolls})")
-            return 1
+            return 0
 
     if attacker.is_mage and attacker.can_heal:
         # Check if someone down
@@ -252,7 +294,7 @@ def make_attack(attacker, opponents):
                 p.recover(heal)
                 print(f"\t{HEAL}\t{attacker.name} runs and heal {p.name} for {heal} HP ({rolls})")
                 print(f"\t{BLUE_HEART}\t{p.name}: {p.hp}/{p.max_hp}")
-                return 1
+                return 0
 
     if attacker.is_mage:
         damage, rolls = attacker.attack(attacker.magic_spell.skill, magic=True)
@@ -292,17 +334,17 @@ def make_attack(attacker, opponents):
                 if isinstance(o, list):
                     continue
                 if o.hp > 0:
-                    return 1
+                    return 0
         else:
             for o in opponents:
                 if isinstance(o, list):
                     for m in o:
                         if m.hp > 0:
-                            return 1
-        return 0
+                            return 0
+        return 1
     else:
         print("misses...")
-        return 1
+        return 0
 
 # Weapons
 unarmed = Weapon("Unarmed", "1T6", "STY")
@@ -311,128 +353,106 @@ knife = Weapon("Knife", "1T8", "SMI")
 shortsword = Weapon("ShortSword", "1T10", "STY")
 ljungeld = Weapon("Ljungeld", "3T6", "PSY")
 tentakel = Weapon("Tentacle", "1T8", "STY")
-battleaxe = Weapon("BattleAxe", "1T8", "STY")
+battleaxe = Weapon("BattleAxe", "2T8", "STY")
 
 # Statistics metrics
-total_samples = 1000
+total_samples = 1
 total_rounds = []
 players_killed = []
 monsters_killed = []
 party_whipes = []
 monster_whipes = []
 
+party = [
+    PartyMember("Mage", sty=11, fys=12, smi=10, int_=12, psy=13, kar=5, ac=0, melee_weapon=dagger, magic_spell=ljungeld, is_mage=True),
+    PartyMember("Thieve", sty=14, fys=16, smi=18, int_=15, psy=12, kar=8, ac=0, melee_weapon=dagger, range_weapon=knife),
+    PartyMember("Bard", sty=14, fys=15, smi=15, int_=12, psy=13, kar=18, ac=0, melee_weapon=knife, range_weapon=knife),
+    PartyMember("Hunter", sty=12, fys=13, smi=11, int_=13, psy=15, kar=11, ac=1, melee_weapon=knife, range_weapon=knife),
+]
+monsters = [
+    Monster("Monster#1", hp=9, ac=0, fv=9, melee_weapon=unarmed, sb="1T4"),
+    Monster("Monster#2", hp=9, ac=0, fv=9, melee_weapon=unarmed, sb="1T4"),
+    Monster("Monster#3", hp=9, ac=0, fv=9, melee_weapon=unarmed, sb="1T4"),
+    Monster("Monster#4", hp=9, ac=0, fv=9, melee_weapon=unarmed, sb="1T4"),
+]
+
+bosses = [
+#    Monster("Boss#1", hp=30, ac=6, fv=15, melee_weapon=battleaxe, sb="1T6"),
+#    Monster("Boss#2", hp=30, ac=6, fv=15, melee_weapon=battleaxe, sb="1T6"),
+]
+fighters = copy.deepcopy(party)
+fighters.append(monsters)
+
+if bosses:
+    for boss in bosses:
+        # Bosses will have own initiative
+        fighters.append([boss])
+
 # Let the fights begin
+# ===========================================================================
 for _ in range(total_samples):
-    party = [
-        PartyMember("Mage", sty=11, fys=12, smi=10, int_=12, psy=13, kar=5, ac=0, melee_weapon=dagger, magic_spell=ljungeld, is_mage=True),
-        PartyMember("Thieve", sty=14, fys=16, smi=18, int_=15, psy=12, kar=8, ac=0, melee_weapon=dagger, range_weapon=knife),
-        PartyMember("Bard", sty=14, fys=15, smi=15, int_=12, psy=13, kar=18, ac=0, melee_weapon=knife, range_weapon=knife),
-        PartyMember("Hunter", sty=12, fys=13, smi=11, int_=13, psy=15, kar=11, ac=1, melee_weapon=knife, range_weapon=knife),
-    ]
-    monsters = [
-        Monster("Monster#1", hp=9, ac=0, fv=9, melee_weapon=unarmed, sb="1T4"),
-        Monster("Monster#2", hp=9, ac=0, fv=9, melee_weapon=unarmed, sb="1T4"),
-        Monster("Monster#3", hp=9, ac=0, fv=9, melee_weapon=unarmed, sb="1T4"),
-        Monster("Monster#4", hp=9, ac=0, fv=9, melee_weapon=unarmed, sb="1T4"),
-        Monster("Boss#1", hp=30, ac=6, fv=15, melee_weapon=battleaxe, sb="1T6"),
-#        Monster("Boss#2", hp=30, ac=6, fv=15, melee_weapon=battleaxe, sb="1T6"),
-    ]
-    fighters = copy.deepcopy(party)
-    fighters.append(monsters)
     rounds = 0
-    party_alive = 1
-    monster_party_alive = 1
     while True:
+        party_whipe = 1
+        monster_whipe = 1
         random.shuffle(fighters)
-        if not monster_party_alive:
-            mpk_count = 0
-            for m in monsters:
-                if m.hp <= 0:
-                    mpk_count+=1
-            monsters_killed.append(mpk_count)
+
+        # Check if there is a monster or party whipe.
+        monster_kill_count = 0
+        player_kill_count = 0
+        for f in fighters:
+            # Monsters
+            if isinstance(f, list):
+                for m in f:
+                    if m.hp > 0:
+                        monster_whipe = 0
+                    else:
+                        monster_kill_count += 1
+            # Players
+            else:
+                if f.hp > 0:
+                    party_whipe = 0
+                else:
+                    player_kill_count += 1
+
+        if monster_whipe:
+            monsters_killed.append(monster_kill_count)
+            players_killed.append(player_kill_count)
             monster_whipes.append(1)
-
-            pk_count = 0
-            for p in party:
-                if p.hp <= 0 and p.is_player:
-                    pk_count+=1
-
-            players_killed.append(pk_count)
             total_rounds.append(rounds)
-            print(f"\t{WARNING}\tMonster whipe...")
+            print(f"\t{RAINBOW}\tMonster whipe...")
             break
 
-        if not party_alive:
-            pk_count = 0
-            for p in party:
-                if p.hp <= 0 and p.is_player:
-                    pk_count+=1
-
-            players_killed.append(pk_count)
+        if party_whipe:
+            monsters_killed.append(monster_kill_count)
+            players_killed.append(player_kill_count)
             party_whipes.append(1)
             total_rounds.append(rounds)
             print(f"\t{WARNING}\tParty whipe...")
             break
 
         rounds+=1
-        live_dead = []
-        for p in fighters:
-            if isinstance(p, list):
-                inner_list = []
-                for m in p:
-                    if m.hp <= 0:
-                        inner_list.append(f"{BIG_SKULL} {m.name}")
-                    else:
-                        inner_list.append(f"{GREEN_HEART} {m.name}")
-                live_dead.append(inner_list)
-            else:
-                if p.hp <= 0 and p.perma_death:
-                    live_dead.append(f"{BIG_SKULL} {p.name}")
-                elif p.hp <= 0:
-                    live_dead.append(f"{SMALL_SKULL} {p.name}")
-                else:
-                    live_dead.append(f"{BLUE_HEART} {p.name}")
 
         print(f"Round {rounds}", end=": ")
-        print(f"Initiative {live_dead}")
+        print(f"Initiative {decorate_initiative(fighters)}")
         for p in fighters:
             if isinstance(p, list):
                 # This is a monster phase
-                if monster_party_alive:
+                if not party_whipe:
                     for m in p:
-                        party_alive = make_attack(m, fighters)
-                        if not party_alive:
+                        party_whipe = make_attack(m, fighters)
+                        if party_whipe:
                             break 
             else:
-                if party_alive:
-                    # This is a player phase
+                # This is a player phase
+                if not party_whipe and not monster_whipe:
                     if p.hp <= 0:
                         if p.successful_death_saves < 3 and p.failed_death_saves < 3:
-                            death_save, rolls = roll_dice("1T20")
-                            if death_save == 1:
-                                p.successful_death_saves+=2
-                                print(f"\t{EXPLOSION}{DICE}{GREEN_HEART}\t{p.name} manage to survive perma death this time {p.successful_death_saves}/3 ({rolls})")
-                            elif death_save <= p.FYS:
-                                p.successful_death_saves+=1
-                                print(f"\t{DICE}{GREEN_HEART}\t{p.name} manage to survive perma death this time {p.successful_death_saves}/3 ({rolls})")
-                            elif death_save == 20:
-                                p.failed_death_saves+=2
-                                print(f"\t{EXPLOSION}{DICE}{SMALL_SKULL}\t{p.name} rolled deamon roll on perma death {p.failed_death_saves}/3 ({rolls})")
-                            else:
-                                p.failed_death_saves+=1
-                                print(f"\t{DICE}{SMALL_SKULL}\t{p.name} failed roll on perma death {p.failed_death_saves}/3 ({rolls})")
-
-                            if p.successful_death_saves >= 3:
-                                heal, rolls = roll_dice("1T6")
-                                print(f"\t{HEAL}\t{p.name} successfully manage to save himself and getup again with {heal}/{p.max_hp}")
-                                p.recover(heal)
+                            if make_death_roll(p):
                                 party_alive = 1
-                            elif p.failed_death_saves >= 3:
-                                print(f"\t{BIG_SKULL}\t{p.name} has failed 3 death saves, the hero has fallen") 
-                                p.perma_death = True
                     else:
-                        monster_party_alive = make_attack(p, fighters)
-                    if not monster_party_alive:
+                        monster_whipe = make_attack(p, fighters)
+                    if monster_whipe:
                         break
 
 print("======================================")
