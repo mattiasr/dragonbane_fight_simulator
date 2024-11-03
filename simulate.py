@@ -144,6 +144,10 @@ class Monster (BaseStats):
     def attack(self, skill=None, magic=None):
         return super().attack(fv=self.fv, skadebonus=self.sb)
 
+class Boss (Monster):
+    def __init__(self, name, hp, ac, fv, melee_weapon, magic_spell=None, sb=0):
+        super().__init__(name, hp, ac, fv, melee_weapon, magic_spell=None, sb=0)
+
 def roll_dice(dice_roll):
     rolls, max_roll = dice_roll.split("T")
     total_sum = 0
@@ -350,10 +354,12 @@ def make_attack(attacker, opponents):
 unarmed = Weapon("Unarmed", "1T6", "STY")
 dagger = Weapon("Dagger", "1T8", "SMI")
 knife = Weapon("Knife", "1T8", "SMI")
+shortspear = Weapon("ShortSpear", "1T10", "SMI")
 shortsword = Weapon("ShortSword", "1T10", "STY")
 ljungeld = Weapon("Ljungeld", "3T6", "PSY")
 tentakel = Weapon("Tentacle", "1T8", "STY")
 battleaxe = Weapon("BattleAxe", "2T8", "STY")
+trident = Weapon("Trident", "2T6", "STY")
 
 # Statistics metrics
 total_samples = 1000
@@ -374,15 +380,12 @@ for _ in range(total_samples):
         PartyMember("Hunter", sty=12, fys=13, smi=11, int_=13, psy=15, kar=11, ac=1, melee_weapon=knife, range_weapon=knife),
     ]
     monsters = [
-        Monster("Monster#1", hp=9, ac=0, fv=9, melee_weapon=unarmed, sb="1T4"),
-        Monster("Monster#2", hp=9, ac=0, fv=9, melee_weapon=unarmed, sb="1T4"),
-        Monster("Monster#3", hp=9, ac=0, fv=9, melee_weapon=unarmed, sb="1T4"),
-        Monster("Monster#4", hp=9, ac=0, fv=9, melee_weapon=unarmed, sb="1T4"),
+        Monster("Monster#1", hp=10, ac=2, fv=10, melee_weapon=shortspear, sb="1T4"),
+        Monster("Monster#2", hp=10, ac=2, fv=10, melee_weapon=shortspear, sb="1T4"),
     ]
 
     bosses = [
-        Monster("Boss#1", hp=30, ac=6, fv=15, melee_weapon=battleaxe, sb="1T6"),
-    #    Monster("Boss#2", hp=30, ac=6, fv=15, melee_weapon=battleaxe, sb="1T6"),
+        Boss("Boss#1", hp=30, ac=2, fv=14, melee_weapon=trident, sb="1T6"),
     ]
     fighters = copy.deepcopy(party)
     fighters.append(monsters)
