@@ -356,41 +356,42 @@ tentakel = Weapon("Tentacle", "1T8", "STY")
 battleaxe = Weapon("BattleAxe", "2T8", "STY")
 
 # Statistics metrics
-total_samples = 1
+total_samples = 1000
 total_rounds = []
 players_killed = []
 monsters_killed = []
 party_whipes = []
 monster_whipes = []
 
-party = [
-    PartyMember("Mage", sty=11, fys=12, smi=10, int_=12, psy=13, kar=5, ac=0, melee_weapon=dagger, magic_spell=ljungeld, is_mage=True),
-    PartyMember("Thieve", sty=14, fys=16, smi=18, int_=15, psy=12, kar=8, ac=0, melee_weapon=dagger, range_weapon=knife),
-    PartyMember("Bard", sty=14, fys=15, smi=15, int_=12, psy=13, kar=18, ac=0, melee_weapon=knife, range_weapon=knife),
-    PartyMember("Hunter", sty=12, fys=13, smi=11, int_=13, psy=15, kar=11, ac=1, melee_weapon=knife, range_weapon=knife),
-]
-monsters = [
-    Monster("Monster#1", hp=9, ac=0, fv=9, melee_weapon=unarmed, sb="1T4"),
-    Monster("Monster#2", hp=9, ac=0, fv=9, melee_weapon=unarmed, sb="1T4"),
-    Monster("Monster#3", hp=9, ac=0, fv=9, melee_weapon=unarmed, sb="1T4"),
-    Monster("Monster#4", hp=9, ac=0, fv=9, melee_weapon=unarmed, sb="1T4"),
-]
-
-bosses = [
-#    Monster("Boss#1", hp=30, ac=6, fv=15, melee_weapon=battleaxe, sb="1T6"),
-#    Monster("Boss#2", hp=30, ac=6, fv=15, melee_weapon=battleaxe, sb="1T6"),
-]
-fighters = copy.deepcopy(party)
-fighters.append(monsters)
-
-if bosses:
-    for boss in bosses:
-        # Bosses will have own initiative
-        fighters.append([boss])
 
 # Let the fights begin
 # ===========================================================================
 for _ in range(total_samples):
+    party = [
+        PartyMember("Mage", sty=11, fys=12, smi=10, int_=12, psy=13, kar=5, ac=0, melee_weapon=dagger, magic_spell=ljungeld, is_mage=True),
+        PartyMember("Thieve", sty=14, fys=16, smi=18, int_=15, psy=12, kar=8, ac=0, melee_weapon=dagger, range_weapon=knife),
+        PartyMember("Bard", sty=14, fys=15, smi=15, int_=12, psy=13, kar=18, ac=0, melee_weapon=knife, range_weapon=knife),
+        PartyMember("Hunter", sty=12, fys=13, smi=11, int_=13, psy=15, kar=11, ac=1, melee_weapon=knife, range_weapon=knife),
+    ]
+    monsters = [
+        Monster("Monster#1", hp=9, ac=0, fv=9, melee_weapon=unarmed, sb="1T4"),
+        Monster("Monster#2", hp=9, ac=0, fv=9, melee_weapon=unarmed, sb="1T4"),
+        Monster("Monster#3", hp=9, ac=0, fv=9, melee_weapon=unarmed, sb="1T4"),
+        Monster("Monster#4", hp=9, ac=0, fv=9, melee_weapon=unarmed, sb="1T4"),
+    ]
+
+    bosses = [
+        Monster("Boss#1", hp=30, ac=6, fv=15, melee_weapon=battleaxe, sb="1T6"),
+    #    Monster("Boss#2", hp=30, ac=6, fv=15, melee_weapon=battleaxe, sb="1T6"),
+    ]
+    fighters = copy.deepcopy(party)
+    fighters.append(monsters)
+
+    if bosses:
+        for boss in bosses:
+            # Bosses will have own initiative
+            fighters.append([boss])
+
     rounds = 0
     while True:
         party_whipe = 1
