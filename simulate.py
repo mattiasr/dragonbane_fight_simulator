@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-import random
 import copy
+import random
+import time
 
 ATTACK_SPELL = "\U00002728"
 ATTACK_SWORD = "\u2694"
@@ -369,6 +370,7 @@ monsters_killed = []
 party_whipes = []
 monster_whipes = []
 
+start_time = time.time()
 
 # Let the fights begin
 # ===========================================================================
@@ -459,12 +461,16 @@ for _ in range(total_samples):
                     if monster_whipe:
                         break
 
+end_time = time.time()
+elapsed_time = end_time - start_time
+percentage_of_success = (sum(monster_whipes)/total_samples) * 100
+
 print("======================================")
-print("Totalt:")
+print("Summary:")
 print(f"{sum(monsters_killed)} monstes killed ({sum(monsters_killed)/total_samples} killed/fight)")
 print(f"{sum(monster_whipes)} monster whipes ({sum(monster_whipes)/total_samples} monster whipes/fight)")
 print(f"{sum(players_killed)} players killed ({sum(players_killed)/total_samples} killed/fight)")
 print(f"{sum(party_whipes)} party whipes ({sum(party_whipes)/total_samples} party whipes/fight)")
 print(f"{total_samples} fights ({sum(total_rounds)/total_samples} rounds/fight)")
-percentage_of_success = (sum(monster_whipes)/total_samples) * 100
 print(f"Theres a {percentage_of_success:.2f}% Chance of success for the party")
+print(f"Execution took {elapsed_time:.2f} seconds")
