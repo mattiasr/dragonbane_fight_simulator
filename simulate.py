@@ -146,7 +146,7 @@ class Monster (BaseStats):
 
 class Boss (Monster):
     def __init__(self, name, hp, ac, fv, melee_weapon, magic_spell=None, sb=0):
-        super().__init__(name, hp, ac, fv, melee_weapon, magic_spell=None, sb=0)
+        super().__init__(name, hp, ac, fv, melee_weapon, magic_spell=magic_spell, sb=sb)
 
 def roll_dice(dice_roll):
     rolls, max_roll = dice_roll.split("T")
