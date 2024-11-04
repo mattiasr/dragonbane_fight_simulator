@@ -18,6 +18,7 @@ RAINBOW = "\U0001F308"
 SMALL_SKULL = "\u2620"
 WARNING = "\U000026A0\U0000FE0F"
 
+
 class Weapon:
     def __init__(self, name, damage, skill):
         self.name = name
@@ -31,13 +32,14 @@ class Weapon:
             _, dice = self.damage.split("T")
             damage, rolls = roll_dice(f"1T{dice}")
             total_rolls.append(rolls)
-            total_dmg+= damage
+            total_dmg += damage
 
         damage, rolls = roll_dice(self.damage)
         total_rolls.append(rolls)
-        total_dmg+= damage
+        total_dmg += damage
 
         return total_dmg, total_rolls
+
 
 class BaseStats:
     def __init__(self, name, ac, hp=None, melee_weapon=None, magic_spell=None):
@@ -84,37 +86,59 @@ class BaseStats:
 
         if fv_roll > fv:
             # Failed roll
-            print(f"\t{FAILED}\t{self.name} rolls FV: {fv_roll} against FV: {fv} ({fv_rolls})")
+            print(
+                f"\t{FAILED}\t{self.name} rolls FV: {fv_roll} against FV: {fv} ({fv_rolls})"
+            )
             return 0, []
         elif fv_roll == 1:
             # Crit hit
-            print(f"\t{EXPLOSION}\t{self.name} rolls FV: {fv_roll} against FV: {fv} ({fv_rolls})")
+            print(
+                f"\t{EXPLOSION}\t{self.name} rolls FV: {fv_roll} against FV: {fv} ({fv_rolls})"
+            )
             if magic:
                 damage, rolls = self.magic_spell.roll_damage(is_crit=True)
             else:
                 damage, rolls = self.melee_weapon.roll_damage(is_crit=True)
             total_rolls.append(rolls)
-            total_damage+=damage
+            total_damage += damage
         else:
             # Normal hit
-            print(f"\t{INFO}\t{self.name} rolls FV: {fv_roll} against FV: {fv} ({fv_rolls})")
+            print(
+                f"\t{INFO}\t{self.name} rolls FV: {fv_roll} against FV: {fv} ({fv_rolls})"
+            )
             if magic:
                 damage, rolls = self.magic_spell.roll_damage()
             else:
                 damage, rolls = self.melee_weapon.roll_damage()
             total_rolls.append(rolls)
-            total_damage+= damage
-        
+            total_damage += damage
+
         # Do we have Skadebonus?
         if skadebonus and not magic:
             damage, rolls = roll_dice(skadebonus)
             total_rolls.append(rolls)
-            total_damage+= damage
+            total_damage += damage
 
         return total_damage, total_rolls
 
-class PartyMember (BaseStats):
-    def __init__(self, name, sty, fys, smi, int_, psy, kar, ac=0, melee_weapon=None, range_weapon=None, magic_spell=None, is_mage=False, can_heal=True):
+
+class PartyMember(BaseStats):
+    def __init__(
+        self,
+        name,
+        sty,
+        fys,
+        smi,
+        int_,
+        psy,
+        kar,
+        ac=0,
+        melee_weapon=None,
+        range_weapon=None,
+        magic_spell=None,
+        is_mage=False,
+        can_heal=True,
+    ):
         super().__init__(name, ac, melee_weapon=melee_weapon, magic_spell=magic_spell)
         self.STY = sty
         self.SMI = smi
@@ -129,13 +153,18 @@ class PartyMember (BaseStats):
         self.hp = self.FYS  # Default hp
         self.max_hp = self.FYS
         self.vp = self.PSY
-    
-    def attack(self, skill=None, magic=None):
-        return super().attack(skill=skill, skadebonus=get_skadebonus(getattr(self, skill, 0)), magic=magic)
 
-class Monster (BaseStats):
+    def attack(self, skill=None, magic=None):
+        return super().attack(
+            skill=skill, skadebonus=get_skadebonus(getattr(self, skill, 0)), magic=magic
+        )
+
+
+class Monster(BaseStats):
     def __init__(self, name, hp, ac, fv, melee_weapon, magic_spell=None, sb=0):
-        super().__init__(name, ac, hp=hp, melee_weapon=melee_weapon, magic_spell=magic_spell)
+        super().__init__(
+            name, ac, hp=hp, melee_weapon=melee_weapon, magic_spell=magic_spell
+        )
         self.fv = fv
         self.sb = sb
         self.targets = []
@@ -145,9 +174,11 @@ class Monster (BaseStats):
     def attack(self, skill=None, magic=None):
         return super().attack(fv=self.fv, skadebonus=self.sb)
 
-class Boss (Monster):
+
+class Boss(Monster):
     def __init__(self, name, hp, ac, fv, melee_weapon, magic_spell=None, sb=0):
         super().__init__(name, hp, ac, fv, melee_weapon, magic_spell=magic_spell, sb=sb)
+
 
 def roll_dice(dice_roll):
     rolls, max_roll = dice_roll.split("T")
@@ -158,10 +189,11 @@ def roll_dice(dice_roll):
     while i <= int(rolls):
         roll = random.randint(1, int(max_roll))
         total_rolls.append(roll)
-        total_sum+= roll
-        i+=1
+        total_sum += roll
+        i += 1
 
     return total_sum, total_rolls
+
 
 def flatten(nested_list):
     flat_list = []
@@ -172,6 +204,7 @@ def flatten(nested_list):
             flat_list.append(item)
     return flat_list
 
+
 def get_skadebonus(value):
     if value <= 11:
         return 0
@@ -179,6 +212,7 @@ def get_skadebonus(value):
         return "1T4"
     elif value > 16:
         return "1T6"
+
 
 def get_grundchans(value):
     if value <= 5:
@@ -191,6 +225,7 @@ def get_grundchans(value):
         return 6
     elif value > 15 and value <= 18:
         return 7
+
 
 def decorate_initiative(fighters):
     live_dead = []
@@ -212,30 +247,42 @@ def decorate_initiative(fighters):
                 live_dead.append(f"{BLUE_HEART} {p.name}")
     return live_dead
 
+
 def make_death_roll(player):
     death_save, rolls = roll_dice("1T20")
     if death_save == 1:
-        p.successful_death_saves+=2
-        print(f"\t{EXPLOSION}{DICE}{GREEN_HEART}\t{p.name} manage to survive perma death this time {p.successful_death_saves}/3 ({rolls})")
+        p.successful_death_saves += 2
+        print(
+            f"\t{EXPLOSION}{DICE}{GREEN_HEART}\t{p.name} manage to survive perma death this time {p.successful_death_saves}/3 ({rolls})"
+        )
     elif death_save <= p.FYS:
-        p.successful_death_saves+=1
-        print(f"\t{DICE}{GREEN_HEART}\t{p.name} manage to survive perma death this time {p.successful_death_saves}/3 ({rolls})")
+        p.successful_death_saves += 1
+        print(
+            f"\t{DICE}{GREEN_HEART}\t{p.name} manage to survive perma death this time {p.successful_death_saves}/3 ({rolls})"
+        )
     elif death_save == 20:
-        p.failed_death_saves+=2
-        print(f"\t{EXPLOSION}{DICE}{SMALL_SKULL}\t{p.name} rolled deamon roll on perma death {p.failed_death_saves}/3 ({rolls})")
+        p.failed_death_saves += 2
+        print(
+            f"\t{EXPLOSION}{DICE}{SMALL_SKULL}\t{p.name} rolled deamon roll on perma death {p.failed_death_saves}/3 ({rolls})"
+        )
     else:
-        p.failed_death_saves+=1
-        print(f"\t{DICE}{SMALL_SKULL}\t{p.name} failed roll on perma death {p.failed_death_saves}/3 ({rolls})")
+        p.failed_death_saves += 1
+        print(
+            f"\t{DICE}{SMALL_SKULL}\t{p.name} failed roll on perma death {p.failed_death_saves}/3 ({rolls})"
+        )
 
     if p.successful_death_saves >= 3:
         heal, rolls = roll_dice("1T6")
-        print(f"\t{HEAL}\t{p.name} successfully manage to save himself and getup again with {heal}/{p.max_hp}")
+        print(
+            f"\t{HEAL}\t{p.name} successfully manage to save himself and getup again with {heal}/{p.max_hp}"
+        )
         p.recover(heal)
         return 1
     elif p.failed_death_saves >= 3:
-        print(f"\t{BIG_SKULL}\t{p.name} has failed 3 death saves, the hero has fallen") 
+        print(f"\t{BIG_SKULL}\t{p.name} has failed 3 death saves, the hero has fallen")
         p.perma_death = True
     return 0
+
 
 def make_attack(attacker, opponents):
     # Remove dead ppl
@@ -259,8 +306,10 @@ def make_attack(attacker, opponents):
 
             if pick_target.is_player and pick_target.hp > 0:
                 if pick_target.is_mage and give_wizard_a_chance == 0:
-                    print(f"\t{EYES}\t{attacker.name} looks at {pick_target.name}, i will deal with you later...")
-                    give_wizard_a_chance+=1
+                    print(
+                        f"\t{EYES}\t{attacker.name} looks at {pick_target.name}, i will deal with you later..."
+                    )
+                    give_wizard_a_chance += 1
                     continue
                 else:
                     attacker.targets.append(pick_target)
@@ -271,7 +320,7 @@ def make_attack(attacker, opponents):
 
     target = random.choice(attacker.targets)
     sb = 0
-    if hasattr(attacker, 'sb'):
+    if hasattr(attacker, "sb"):
         sb = attacker.sb
     else:
         sb = get_skadebonus(getattr(attacker, attacker.melee_weapon.skill, 0))
@@ -283,8 +332,10 @@ def make_attack(attacker, opponents):
         if attacker.vp < 2:
             # Out of juice, should catch breath one round.
             gain_vp, rolls = roll_dice("1T6")
-            attacker.vp+=gain_vp
-            print(f"\t{HEAL}\t{attacker.name} rest to be able to cast more, gain {gain_vp} VP ({rolls})")
+            attacker.vp += gain_vp
+            print(
+                f"\t{HEAL}\t{attacker.name} rest to be able to cast more, gain {gain_vp} VP ({rolls})"
+            )
             return 0
 
     if attacker.is_mage and attacker.can_heal:
@@ -292,27 +343,39 @@ def make_attack(attacker, opponents):
         for p in opponents:
             if isinstance(p, list):
                 continue
-            if p.hp <= 0 and not p.perma_death and (p.failed_death_saves or p.successful_death_saves):
+            if (
+                p.hp <= 0
+                and not p.perma_death
+                and (p.failed_death_saves or p.successful_death_saves)
+            ):
                 # Heal one down member
-                attacker.vp-=2
+                attacker.vp -= 2
                 heal, rolls = roll_dice("2T6")
                 p.recover(heal)
-                print(f"\t{HEAL}\t{attacker.name} runs and heal {p.name} for {heal} HP ({rolls})")
+                print(
+                    f"\t{HEAL}\t{attacker.name} runs and heal {p.name} for {heal} HP ({rolls})"
+                )
                 print(f"\t{BLUE_HEART}\t{p.name}: {p.hp}/{p.max_hp}")
                 return 0
 
     if attacker.is_mage:
         damage, rolls = attacker.attack(attacker.magic_spell.skill, magic=True)
-        attacker.vp-=2
-        print(f"\t{ATTACK_SPELL}\t{attacker.name} attacks {target.name} with {attacker.magic_spell.name} ({attacker.magic_spell.damage})", end=" ")
+        attacker.vp -= 2
+        print(
+            f"\t{ATTACK_SPELL}\t{attacker.name} attacks {target.name} with {attacker.magic_spell.name} ({attacker.magic_spell.damage})",
+            end=" ",
+        )
     else:
         damage, rolls = attacker.attack(attacker.melee_weapon.skill)
-        print(f"\t{ATTACK_SWORD}\t{attacker.name} attacks {target.name} with {attacker.melee_weapon.name} ({attacker.melee_weapon.damage} + {sb})", end=" ")
+        print(
+            f"\t{ATTACK_SWORD}\t{attacker.name} attacks {target.name} with {attacker.melee_weapon.name} ({attacker.melee_weapon.damage} + {sb})",
+            end=" ",
+        )
 
     if damage > 0:
         print(f"hits for {damage}-{target.ac} damage ({flatten(rolls)})")
         if target.ac:
-            damage-=target.ac
+            damage -= target.ac
 
         if damage < 0:
             # Mitigate healing player with negative damage due to AC
@@ -351,6 +414,7 @@ def make_attack(attacker, opponents):
         print("misses...")
         return 0
 
+
 # Weapons
 unarmed = Weapon("Unarmed", "1T6", "STY")
 dagger = Weapon("Dagger", "1T8", "SMI")
@@ -376,10 +440,55 @@ start_time = time.time()
 # ===========================================================================
 for _ in range(total_samples):
     party = [
-        PartyMember("Mage", sty=11, fys=12, smi=10, int_=12, psy=13, kar=5, ac=0, melee_weapon=dagger, magic_spell=ljungeld, is_mage=True),
-        PartyMember("Thieve", sty=14, fys=16, smi=18, int_=15, psy=12, kar=8, ac=0, melee_weapon=dagger, range_weapon=knife),
-        PartyMember("Bard", sty=14, fys=15, smi=15, int_=12, psy=13, kar=18, ac=0, melee_weapon=knife, range_weapon=knife),
-        PartyMember("Hunter", sty=12, fys=13, smi=11, int_=13, psy=15, kar=11, ac=1, melee_weapon=knife, range_weapon=knife),
+        PartyMember(
+            "Mage",
+            sty=11,
+            fys=12,
+            smi=10,
+            int_=12,
+            psy=13,
+            kar=5,
+            ac=0,
+            melee_weapon=dagger,
+            magic_spell=ljungeld,
+            is_mage=True,
+        ),
+        PartyMember(
+            "Thieve",
+            sty=14,
+            fys=16,
+            smi=18,
+            int_=15,
+            psy=12,
+            kar=8,
+            ac=0,
+            melee_weapon=dagger,
+            range_weapon=knife,
+        ),
+        PartyMember(
+            "Bard",
+            sty=14,
+            fys=15,
+            smi=15,
+            int_=12,
+            psy=13,
+            kar=18,
+            ac=0,
+            melee_weapon=knife,
+            range_weapon=knife,
+        ),
+        PartyMember(
+            "Hunter",
+            sty=12,
+            fys=13,
+            smi=11,
+            int_=13,
+            psy=15,
+            kar=11,
+            ac=1,
+            melee_weapon=knife,
+            range_weapon=knife,
+        ),
     ]
     monsters = [
         Monster("Monster#1", hp=10, ac=2, fv=10, melee_weapon=shortspear, sb="1T4"),
@@ -437,7 +546,7 @@ for _ in range(total_samples):
             print(f"\t{WARNING}\tParty whipe...")
             break
 
-        rounds+=1
+        rounds += 1
 
         print(f"Round {rounds}", end=": ")
         print(f"Initiative {decorate_initiative(fighters)}")
@@ -448,7 +557,7 @@ for _ in range(total_samples):
                     for m in p:
                         party_whipe = make_attack(m, fighters)
                         if party_whipe:
-                            break 
+                            break
             else:
                 # This is a player phase
                 if not party_whipe and not monster_whipe:
@@ -463,14 +572,22 @@ for _ in range(total_samples):
 
 end_time = time.time()
 elapsed_time = end_time - start_time
-percentage_of_success = (sum(monster_whipes)/total_samples) * 100
+percentage_of_success = (sum(monster_whipes) / total_samples) * 100
 
 print("======================================")
 print("Summary:")
-print(f"{sum(monsters_killed)} monstes killed ({sum(monsters_killed)/total_samples} killed/fight)")
-print(f"{sum(monster_whipes)} monster whipes ({sum(monster_whipes)/total_samples} monster whipes/fight)")
-print(f"{sum(players_killed)} players killed ({sum(players_killed)/total_samples} killed/fight)")
-print(f"{sum(party_whipes)} party whipes ({sum(party_whipes)/total_samples} party whipes/fight)")
+print(
+    f"{sum(monsters_killed)} monstes killed ({sum(monsters_killed)/total_samples} killed/fight)"
+)
+print(
+    f"{sum(monster_whipes)} monster whipes ({sum(monster_whipes)/total_samples} monster whipes/fight)"
+)
+print(
+    f"{sum(players_killed)} players killed ({sum(players_killed)/total_samples} killed/fight)"
+)
+print(
+    f"{sum(party_whipes)} party whipes ({sum(party_whipes)/total_samples} party whipes/fight)"
+)
 print(f"{total_samples} fights ({sum(total_rounds)/total_samples} rounds/fight)")
 print(f"Theres a {percentage_of_success:.2f}% Chance of success for the party")
 print(f"Execution took {elapsed_time:.2f} seconds")
