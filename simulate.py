@@ -7,6 +7,8 @@ ATTACK_SPELL = "\U00002728"
 ATTACK_SWORD = "\u2694"
 BIG_SKULL = "\U0001F480"
 BLUE_HEART = "\U0001F499"
+CRIT = "\U0001F4A5"
+DEAMON = "\U0001F479"
 DICE = "\U0001F3B2"
 EXPLOSION = "\U0001F4A5"
 EYES = "\U0001F440"
@@ -29,8 +31,7 @@ class Weapon:
         total_dmg = 0
         total_rolls = []
         if is_crit:
-            _, dice = self.damage.split("T")
-            damage, rolls = roll_dice(f"1T{dice}")
+            damage, rolls = roll_dice(self.damage)
             total_rolls.append(rolls)
             total_dmg += damage
 
@@ -93,7 +94,7 @@ class BaseStats:
         elif fv_roll == 1:
             # Crit hit
             print(
-                f"\t{EXPLOSION}\t{self.name} rolls FV: {fv_roll} against FV: {fv} ({fv_rolls})"
+                f"\t{CRIT}\t{self.name} rolls FV: {fv_roll} against FV: {fv} ({fv_rolls})"
             )
             if magic:
                 damage, rolls = self.magic_spell.roll_damage(is_crit=True)
@@ -253,7 +254,7 @@ def make_death_roll(player):
     if death_save == 1:
         p.successful_death_saves += 2
         print(
-            f"\t{EXPLOSION}{DICE}{GREEN_HEART}\t{p.name} manage to survive perma death this time {p.successful_death_saves}/3 ({rolls})"
+            f"\t{CRIT}{DICE}{GREEN_HEART}\t{p.name} manage to survive perma death this time {p.successful_death_saves}/3 ({rolls})"
         )
     elif death_save <= p.FYS:
         p.successful_death_saves += 1
@@ -263,7 +264,7 @@ def make_death_roll(player):
     elif death_save == 20:
         p.failed_death_saves += 2
         print(
-            f"\t{EXPLOSION}{DICE}{SMALL_SKULL}\t{p.name} rolled deamon roll on perma death {p.failed_death_saves}/3 ({rolls})"
+            f"\t{DEAMON}{DICE}{SMALL_SKULL}\t{p.name} rolled deamon roll on perma death {p.failed_death_saves}/3 ({rolls})"
         )
     else:
         p.failed_death_saves += 1
