@@ -434,7 +434,7 @@ battleaxe = Weapon("BattleAxe", "2T8", "STY")
 trident = Weapon("Trident", "2T6", "STY")
 
 # Statistics metrics
-total_samples = 1000
+total_samples = 1
 total_rounds = []
 players_killed = []
 monsters_killed = []
