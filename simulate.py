@@ -16,6 +16,7 @@ FAILED = "\u274C"
 GREEN_HEART = "\U0001F49A"
 HEAL = "\U0001F33F"
 INFO = "\U0001F6C8"
+OK = "\u2705"
 RAINBOW = "\U0001F308"
 SMALL_SKULL = "\u2620"
 WARNING = "\U000026A0\U0000FE0F"
@@ -85,13 +86,7 @@ class BaseStats:
 
         fv_roll, fv_rolls = roll_dice("1T20")
 
-        if fv_roll > fv:
-            # Failed roll
-            print(
-                f"\t{FAILED}\t{self.name} rolls FV: {fv_roll} against FV: {fv} ({fv_rolls})"
-            )
-            return 0, []
-        elif fv_roll == 1:
+        if fv_roll == 1:
             # Crit hit
             print(
                 f"\t{CRIT}\t{self.name} rolls FV: {fv_roll} against FV: {fv} ({fv_rolls})"
@@ -102,10 +97,21 @@ class BaseStats:
                 damage, rolls = self.melee_weapon.roll_damage(is_crit=True)
             total_rolls.append(rolls)
             total_damage += damage
+        elif fv_roll == 20:
+            print(
+                f"\t{DEAMON}\t{self.name} rolls FV: {fv_roll} against FV: {fv} ({fv_rolls})"
+            )
+            return 0, []
+        elif fv_roll > fv:
+            # Failed roll
+            print(
+                f"\t{FAILED}\t{self.name} rolls FV: {fv_roll} against FV: {fv} ({fv_rolls})"
+            )
+            return 0, []
         else:
             # Normal hit
             print(
-                f"\t{INFO}\t{self.name} rolls FV: {fv_roll} against FV: {fv} ({fv_rolls})"
+                f"\t{OK}\t{self.name} rolls FV: {fv_roll} against FV: {fv} ({fv_rolls})"
             )
             if magic:
                 damage, rolls = self.magic_spell.roll_damage()
