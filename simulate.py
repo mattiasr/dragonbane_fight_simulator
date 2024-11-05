@@ -101,13 +101,13 @@ class BaseStats:
             print(
                 f"\t{DEAMON}\t{self.name} rolls FV: {fv_roll} against FV: {fv} ({fv_rolls})"
             )
-            return 0, []
+            return fv_roll, 0, []
         elif fv_roll > fv:
             # Failed roll
             print(
                 f"\t{FAILED}\t{self.name} rolls FV: {fv_roll} against FV: {fv} ({fv_rolls})"
             )
-            return 0, []
+            return fv_roll, 0, []
         else:
             # Normal hit
             print(
@@ -126,7 +126,7 @@ class BaseStats:
             total_rolls.append(rolls)
             total_damage += damage
 
-        return total_damage, total_rolls
+        return fv_roll, total_damage, total_rolls
 
 
 class PartyMember(BaseStats):
@@ -189,13 +189,15 @@ class Boss(Monster):
 
 def roll_dice(dice_roll):
     rolls, max_roll = dice_roll.split("T")
+    dice_type = f"T{max_roll}"
     total_sum = 0
-    total_rolls = []
+    total_rolls = {}
+    total_rolls[dice_type] = []
     i = 1
 
     while i <= int(rolls):
         roll = random.randint(1, int(max_roll))
-        total_rolls.append(roll)
+        total_rolls[dice_type].append(roll)
         total_sum += roll
         i += 1
 
@@ -366,14 +368,14 @@ def make_attack(attacker, opponents):
                 return 0
 
     if attacker.is_mage:
-        damage, rolls = attacker.attack(attacker.magic_spell.skill, magic=True)
+        fv_roll, damage, rolls = attacker.attack(attacker.magic_spell.skill, magic=True)
         attacker.vp -= 2
         print(
             f"\t{ATTACK_SPELL}\t{attacker.name} attacks {target.name} with {attacker.magic_spell.name} ({attacker.magic_spell.damage})",
             end=" ",
         )
     else:
-        damage, rolls = attacker.attack(attacker.melee_weapon.skill)
+        fv_roll, damage, rolls = attacker.attack(attacker.melee_weapon.skill)
         print(
             f"\t{ATTACK_SWORD}\t{attacker.name} attacks {target.name} with {attacker.melee_weapon.name} ({attacker.melee_weapon.damage} + {sb})",
             end=" ",
@@ -428,7 +430,7 @@ dagger = Weapon("Dagger", "1T8", "SMI")
 knife = Weapon("Knife", "1T8", "SMI")
 shortspear = Weapon("ShortSpear", "1T10", "SMI")
 shortsword = Weapon("ShortSword", "1T10", "STY")
-ljungeld = Weapon("Ljungeld", "3T6", "PSY")
+ljungeld = Weapon("Ljungeld", "2T6", "PSY")
 tentakel = Weapon("Tentacle", "1T8", "STY")
 battleaxe = Weapon("BattleAxe", "2T8", "STY")
 trident = Weapon("Trident", "2T6", "STY")
