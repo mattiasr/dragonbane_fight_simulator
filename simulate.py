@@ -2,6 +2,7 @@
 import copy
 import random
 import time
+from typing import Tuple, Union
 
 ATTACK_SPELL = "\U00002728"
 ATTACK_SWORD = "\u2694"
@@ -28,7 +29,7 @@ class Weapon:
         self.damage = damage
         self.skill = skill
 
-    def roll_damage(self, is_crit=False):
+    def roll_damage(self, is_crit=False) -> Tuple[int, list]:
         total_dmg = 0
         total_rolls = []
         if is_crit:
@@ -60,19 +61,21 @@ class BaseStats:
         self.melee_weapon = melee_weapon
         self.magic_spell = magic_spell
 
-    def take_damage(self, amount):
+    def take_damage(self, amount: int) -> None:
         self.hp -= amount
 
-    def heal_damage(self, amount):
+    def heal_damage(self, amount: int) -> None:
         self.hp += amount
 
-    def recover(self, amount):
+    def recover(self, amount: int) -> None:
         self.hp = 0
         self.successful_death_saves = 0
         self.failed_death_saves = 0
         self.hp += amount
 
-    def attack(self, skill=None, fv=None, skadebonus=None, magic=False):
+    def attack(
+        self, skill=None, fv=None, skadebonus=None, magic=False
+    ) -> Tuple[int, int, list]:
         total_damage = 0
         damage = 0
 
@@ -129,7 +132,7 @@ class BaseStats:
         return fv_roll, total_damage, total_rolls
 
 
-class PartyMember(BaseStats):
+class Character(BaseStats):
     def __init__(
         self,
         name,
@@ -167,7 +170,7 @@ class PartyMember(BaseStats):
         )
 
 
-class Monster(BaseStats):
+class NPC(BaseStats):
     def __init__(self, name, hp, ac, fv, melee_weapon, magic_spell=None, sb=0):
         super().__init__(
             name, ac, hp=hp, melee_weapon=melee_weapon, magic_spell=magic_spell
@@ -182,12 +185,30 @@ class Monster(BaseStats):
         return super().attack(fv=self.fv, skadebonus=self.sb)
 
 
-class Boss(Monster):
+class Boss(NPC):
     def __init__(self, name, hp, ac, fv, melee_weapon, magic_spell=None, sb=0):
         super().__init__(name, hp, ac, fv, melee_weapon, magic_spell=magic_spell, sb=sb)
 
 
-def roll_dice(dice_roll):
+def opponent_alive(fighters: list) -> int:
+    max_count = sum([1 for f in fighters if isinstance(f, (NPC, Boss))])
+    kill_count = sum([1 for f in fighters if isinstance(f, (NPC, Boss)) and f.hp <= 0])
+    if kill_count == max_count:
+        return 0
+    else:
+        return 1
+
+
+def party_alive(fighters: list) -> int:
+    max_count = sum([1 for f in fighters if isinstance(f, Character)])
+    kill_count = sum([1 for f in fighters if isinstance(f, Character) and f.hp <= 0])
+    if kill_count == max_count:
+        return 0
+    else:
+        return 1
+
+
+def roll_dice(dice_roll: str) -> Tuple[int, list]:
     rolls, max_roll = dice_roll.split("T")
     dice_type = f"T{max_roll}"
     total_sum = 0
@@ -204,7 +225,7 @@ def roll_dice(dice_roll):
     return total_sum, total_rolls
 
 
-def flatten(nested_list):
+def flatten(nested_list: list) -> list:
     flat_list = []
     for item in nested_list:
         if isinstance(item, list):
@@ -214,7 +235,7 @@ def flatten(nested_list):
     return flat_list
 
 
-def get_skadebonus(value):
+def get_skadebonus(value: int) -> Union[int, str]:
     if value <= 11:
         return 0
     elif value > 11 and value <= 16:
@@ -223,7 +244,7 @@ def get_skadebonus(value):
         return "1T6"
 
 
-def get_grundchans(value):
+def get_grundchans(value: int) -> int:
     if value <= 5:
         return 3
     elif value > 5 and value <= 8:
@@ -236,7 +257,7 @@ def get_grundchans(value):
         return 7
 
 
-def decorate_initiative(fighters):
+def decorate_initiative(fighters: list) -> list:
     live_dead = []
     for p in fighters:
         if isinstance(p, list):
@@ -247,6 +268,11 @@ def decorate_initiative(fighters):
                 else:
                     inner_list.append(f"{GREEN_HEART} {m.name}")
             live_dead.append(inner_list)
+        elif isinstance(p, (NPC, Boss)):
+            if p.hp <= 0:
+                live_dead.append(f"{BIG_SKULL} {p.name}")
+            else:
+                live_dead.append(f"{GREEN_HEART} {p.name}")
         else:
             if p.hp <= 0 and p.perma_death:
                 live_dead.append(f"{BIG_SKULL} {p.name}")
@@ -257,7 +283,7 @@ def decorate_initiative(fighters):
     return live_dead
 
 
-def make_death_roll(player):
+def make_death_roll(player: Character) -> int:
     death_save, rolls = roll_dice("1T20")
     if death_save == 1:
         p.successful_death_saves += 2
@@ -293,37 +319,38 @@ def make_death_roll(player):
     return 0
 
 
-def make_attack(attacker, opponents):
-    # Remove dead ppl
+def make_attack(attacker: BaseStats, opponents: list) -> None:
+    # Remove dead ppl from your target list
     for t in attacker.targets:
         if t.hp <= 0:
             attacker.targets.remove(t)
 
     if attacker.targets == []:
+        opponents = flatten(opponents)
+        filter_opponents = []
+        if isinstance(attacker, Character):
+            filter_opponents = [
+                o for o in opponents if isinstance(o, (NPC, Boss)) and o.hp > 0
+            ]
+        else:
+            filter_opponents = [
+                o for o in opponents if isinstance(o, Character) and o.hp > 0
+            ]
+
+        if filter_opponents == []:
+            return 1
+
         give_wizard_a_chance = 0
         while True:
-            pick_target = random.choice(opponents)
-            if attacker.is_player:
-                if not isinstance(pick_target, list):
-                    # Player try to target player? not today
-                    continue
-                pick_target = random.choice(pick_target)
-            else:
-                if isinstance(pick_target, list):
-                    # Monster try to target monster? nah, skip and retry
-                    continue
+            pick_target = random.choice(filter_opponents)
 
-            if pick_target.is_player and pick_target.hp > 0:
-                if pick_target.is_mage and give_wizard_a_chance == 0:
-                    print(
-                        f"\t{EYES}\t{attacker.name} looks at {pick_target.name}, i will deal with you later..."
-                    )
-                    give_wizard_a_chance += 1
-                    continue
-                else:
-                    attacker.targets.append(pick_target)
-                    break
-            elif pick_target.hp > 0:
+            if pick_target.is_mage and give_wizard_a_chance == 0:
+                print(
+                    f"\t{EYES}\t{attacker.name} looks at {pick_target.name}, i will deal with you later..."
+                )
+                give_wizard_a_chance += 1
+                continue
+            else:
                 attacker.targets.append(pick_target)
                 break
 
@@ -345,7 +372,7 @@ def make_attack(attacker, opponents):
             print(
                 f"\t{HEAL}\t{attacker.name} rest to be able to cast more, gain {gain_vp} VP ({rolls})"
             )
-            return 0
+            return
 
     if attacker.is_mage and attacker.can_heal:
         # Check if someone down
@@ -365,7 +392,7 @@ def make_attack(attacker, opponents):
                     f"\t{HEAL}\t{attacker.name} runs and heal {p.name} for {heal} HP ({rolls})"
                 )
                 print(f"\t{BLUE_HEART}\t{p.name}: {p.hp}/{p.max_hp}")
-                return 0
+                return
 
     if attacker.is_mage:
         fv_roll, damage, rolls = attacker.attack(attacker.magic_spell.skill, magic=True)
@@ -391,10 +418,12 @@ def make_attack(attacker, opponents):
             damage = 0
 
         target.take_damage(damage)
-        if target.is_player:
-            print(f"\t{BLUE_HEART}\t{target.name}: {target.hp}/{target.max_hp}")
-        else:
-            print(f"\t{GREEN_HEART}\t{target.name}: {target.hp}/{target.max_hp}")
+        heart_color = GREEN_HEART
+        if isinstance(target, Character):
+            heart_color = BLUE_HEART
+
+        print(f"\t{heart_color}\t{target.name}: {target.hp}/{target.max_hp}")
+
         if target.hp <= 0:
             if target.is_player:
                 if target.hp < (target.max_hp * -1):
@@ -405,23 +434,8 @@ def make_attack(attacker, opponents):
             else:
                 print(f"\t{BIG_SKULL}\t{target.name} is dead")
             attacker.targets.remove(target)
-
-        if target.is_player:
-            for o in opponents:
-                if isinstance(o, list):
-                    continue
-                if o.hp > 0:
-                    return 0
-        else:
-            for o in opponents:
-                if isinstance(o, list):
-                    for m in o:
-                        if m.hp > 0:
-                            return 0
-        return 1
     else:
         print("misses...")
-        return 0
 
 
 # Weapons
@@ -449,7 +463,7 @@ start_time = time.time()
 # ===========================================================================
 for _ in range(total_samples):
     party = [
-        PartyMember(
+        Character(
             "Mage",
             sty=11,
             fys=12,
@@ -462,7 +476,7 @@ for _ in range(total_samples):
             magic_spell=ljungeld,
             is_mage=True,
         ),
-        PartyMember(
+        Character(
             "Thieve",
             sty=14,
             fys=16,
@@ -474,7 +488,7 @@ for _ in range(total_samples):
             melee_weapon=dagger,
             range_weapon=knife,
         ),
-        PartyMember(
+        Character(
             "Bard",
             sty=14,
             fys=15,
@@ -486,7 +500,7 @@ for _ in range(total_samples):
             melee_weapon=knife,
             range_weapon=knife,
         ),
-        PartyMember(
+        Character(
             "Hunter",
             sty=12,
             fys=13,
@@ -499,47 +513,44 @@ for _ in range(total_samples):
             range_weapon=knife,
         ),
     ]
-    monsters = [
-        Monster("Monster#1", hp=10, ac=2, fv=10, melee_weapon=shortspear, sb="1T4"),
-        Monster("Monster#2", hp=10, ac=2, fv=10, melee_weapon=shortspear, sb="1T4"),
+    npc = [
+        NPC("Thug#1", hp=10, ac=2, fv=10, melee_weapon=shortspear, sb="1T4"),
+        NPC("Thug#2", hp=10, ac=2, fv=10, melee_weapon=shortspear, sb="1T4"),
     ]
 
     bosses = [
         Boss("Boss#1", hp=30, ac=2, fv=14, melee_weapon=trident, sb="1T6"),
     ]
     fighters = copy.deepcopy(party)
-    fighters.append(monsters)
+    #    fighters.append(npc)
+    fighters.append(
+        Boss("WrongBoss#1", hp=30, ac=2, fv=14, melee_weapon=trident, sb="1T6")
+    )
 
     if bosses:
         for boss in bosses:
             # Bosses will have own initiative
-            fighters.append([boss])
+            fighters.append(boss)
 
     rounds = 0
     while True:
-        party_whipe = 1
-        monster_whipe = 1
+        flat_fighters = flatten(fighters)
+        max_player_kill_count = sum(
+            [1 for f in flat_fighters if isinstance(f, Character)]
+        )
+        max_monster_kill_count = sum(
+            [1 for f in flat_fighters if isinstance(f, (NPC, Boss))]
+        )
+        player_kill_count = sum(
+            [1 for f in flat_fighters if isinstance(f, Character) and f.hp <= 0]
+        )
+        monster_kill_count = sum(
+            [1 for f in flat_fighters if isinstance(f, (NPC, Boss)) and f.hp <= 0]
+        )
+
         random.shuffle(fighters)
 
-        # Check if there is a monster or party whipe.
-        monster_kill_count = 0
-        player_kill_count = 0
-        for f in fighters:
-            # Monsters
-            if isinstance(f, list):
-                for m in f:
-                    if m.hp > 0:
-                        monster_whipe = 0
-                    else:
-                        monster_kill_count += 1
-            # Players
-            else:
-                if f.hp > 0:
-                    party_whipe = 0
-                else:
-                    player_kill_count += 1
-
-        if monster_whipe:
+        if not opponent_alive(flat_fighters):
             monsters_killed.append(monster_kill_count)
             players_killed.append(player_kill_count)
             monster_whipes.append(1)
@@ -547,7 +558,7 @@ for _ in range(total_samples):
             print(f"\t{RAINBOW}\tMonster whipe...")
             break
 
-        if party_whipe:
+        if not party_alive(flat_fighters):
             monsters_killed.append(monster_kill_count)
             players_killed.append(player_kill_count)
             party_whipes.append(1)
@@ -558,26 +569,41 @@ for _ in range(total_samples):
         rounds += 1
 
         print(f"Round {rounds}", end=": ")
-        print(f"Initiative {decorate_initiative(fighters)}")
+        print(
+            f"Initiative {monster_kill_count}, {player_kill_count} - {decorate_initiative(fighters)}"
+        )
         for p in fighters:
             if isinstance(p, list):
                 # This is a monster phase
-                if not party_whipe:
+                if party_alive(flat_fighters) and opponent_alive(flat_fighters):
                     for m in p:
-                        party_whipe = make_attack(m, fighters)
-                        if party_whipe:
-                            break
+                        if isinstance(m, (NPC, Boss)):
+                            make_attack(m, fighters)
+                            if not party_alive(flat_fighters):
+                                break
             else:
                 # This is a player phase
-                if not party_whipe and not monster_whipe:
-                    if p.hp <= 0:
-                        if p.successful_death_saves < 3 and p.failed_death_saves < 3:
-                            if make_death_roll(p):
-                                party_alive = 1
-                    else:
-                        monster_whipe = make_attack(p, fighters)
-                    if monster_whipe:
-                        break
+                if isinstance(p, Character):
+                    if party_alive(flat_fighters) and opponent_alive(flat_fighters):
+                        if (
+                            p.hp <= 0
+                            and p.successful_death_saves < 3
+                            and p.failed_death_saves < 3
+                            and p.perma_death is not True
+                        ):
+                            make_death_roll(p)
+                        else:
+                            make_attack(p, fighters)
+
+                        if not opponent_alive(flat_fighters):
+                            break
+
+                # If someone put a NPC/Boss without an list
+                else:
+                    if party_alive(flat_fighters) and opponent_alive(flat_fighters):
+                        make_attack(p, fighters)
+                        if not party_alive(flat_fighters):
+                            break
 
 end_time = time.time()
 elapsed_time = end_time - start_time
